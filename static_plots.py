@@ -89,7 +89,7 @@ def scatterplot(data: pd.DataFrame,
     else:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, projection="3d")
-    dims = [data[f"{method}{i+1}"].values for i in range(n_components)]
+    dims = [data[f"{method}{i + 1}"].values for i in range(n_components)]
     colourbar_kwargs = colourbar_kwargs or {}
     legend_kwargs = legend_kwargs or {"bbox_to_anchor": (1.15, 1.)}
     palette = _set_palette(discrete=discrete, palette=palette)
@@ -106,7 +106,7 @@ def scatterplot(data: pd.DataFrame,
         return ax
     colours = cycle(plt.get_cmap(palette).colors)
     for l, df in data.groupby(label):
-        dims = [df[f"{method}{i+1}"].values for i in range(n_components)]
+        dims = [df[f"{method}{i + 1}"].values for i in range(n_components)]
         if size is not None:
             kwargs["s"] = df[size].values * scale_factor
         ax.scatter(*dims, color=next(colours), label=l, **kwargs)
@@ -140,19 +140,19 @@ def _scatterplot_defaults(**kwargs):
     return updated_kwargs
 
 
-def cluster_plot(data: pd.DataFrame,
-                 label: str,
-                 features: list,
-                 discrete: bool,
-                 n_components: int = 2,
-                 method: str = "UMAP",
-                 dim_reduction_kwargs: dict or None = None,
-                 scale_factor: int = 15,
-                 figsize: tuple = (12, 8),
-                 palette: str = "tab20",
-                 colourbar_kwargs: dict or None = None,
-                 legend_kwargs: dict or None = None,
-                 **kwargs):
+def clusterplot(data: pd.DataFrame,
+                label: str,
+                features: list,
+                discrete: bool,
+                n_components: int = 2,
+                method: str = "UMAP",
+                dim_reduction_kwargs: dict or None = None,
+                scale_factor: int = 15,
+                figsize: tuple = (12, 8),
+                palette: str = "tab20",
+                colourbar_kwargs: dict or None = None,
+                legend_kwargs: dict or None = None,
+                **kwargs):
     """
     Generates a meta-clustering bubble plot
 
@@ -215,6 +215,7 @@ def cluster_plot(data: pd.DataFrame,
 
 def clustermap(data: pd.DataFrame,
                features: list,
+               summary_method: str = "mean",
                **kwargs):
     """
     Generate a meta-clustering heatmap with the y-axis (index) being the
@@ -227,6 +228,7 @@ def clustermap(data: pd.DataFrame,
         Standard explorer summary dataframe as generated from CytoPy
     features: list
         List of columns to include in heatmap
+    summary_method: str (default="mean")
     kwargs:
         Additional keyword arguments passed to Seaborn.clustermap
 
@@ -234,12 +236,17 @@ def clustermap(data: pd.DataFrame,
     -------
 
     """
-    kwargs = kwargs or {"col_cluster": True,
-                        "figsize": (10, 15),
-                        "standard_scale": 1,
-                        "cmap": "vlag"}
+    kwgs = {"col_cluster": True,
+            "figsize": (10, 15),
+            "standard_scale": 1,
+            "cmap": "vlag"}
+    for k, v in kwargs.items():
+        kwgs[k] = v
     data = data.copy()
     data[features] = data[features].apply(pd.to_numeric)
     assert "meta_label" in data.columns, "meta_label missing from data columns"
-    data = data.groupby("meta_label")[features].mean()
-    return sns.clustermap(data, **kwargs)
+    if summary_method == "median":
+        data = data.groupby("meta_label")[features].median()
+    else:
+        data = data.groupby("meta_label")[features].mean()
+    return sns.clustermap(data, **kwgs)
